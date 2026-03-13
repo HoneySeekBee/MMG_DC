@@ -1,5 +1,9 @@
+using DCData;
 using DCData.Connections;
 using DCData.Querying;
+using Microsoft.EntityFrameworkCore;
+using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
+using StackExchange.Redis;
 
 namespace DCWebServer
 {
@@ -9,10 +13,20 @@ namespace DCWebServer
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            // secrets.json(비밀번호 등) — .gitignore 대상, optional
+            builder.Configuration.AddJsonFile("secrets.json", optional: true, reloadOnChange: false);
+
             // ── Infrastructure ────────────────────────────────────────────────
             builder.Services.AddSingleton<IDbConnectionFactory, MySqlConnectionFactory>();
             builder.Services.AddScoped<IQueryFactoryProvider, QueryFactoryProvider>();
+            builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+                ConnectionMultiplexer.Connect(builder.Configuration["Redis:ConnectionString"]!));
 
+            builder.Services.AddDbContext<AppDbContext>(options =>
+                options.UseMySql(
+                    builder.Configuration.GetConnectionString("MainDatabase"),
+                    ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("MainDatabase"))
+                ));
             // ── API ──────────────────────────────────────────────────────────
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -31,7 +45,6 @@ namespace DCWebServer
             app.UseHttpsRedirection();
 
             app.UseAuthorization();
-
 
             app.MapControllers();
 
