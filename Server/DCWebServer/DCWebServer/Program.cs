@@ -1,3 +1,5 @@
+using DCData.Connections;
+using DCData.Querying;
 
 namespace DCWebServer
 {
@@ -7,8 +9,11 @@ namespace DCWebServer
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
+            // ── Infrastructure ────────────────────────────────────────────────
+            builder.Services.AddSingleton<IDbConnectionFactory, MySqlConnectionFactory>();
+            builder.Services.AddScoped<IQueryFactoryProvider, QueryFactoryProvider>();
 
+            // ── API ──────────────────────────────────────────────────────────
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
