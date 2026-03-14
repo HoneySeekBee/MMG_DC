@@ -36,4 +36,24 @@ public class AuthController : ControllerBase
 
         return Ok(result.Data);
     }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh([FromBody] RefreshRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _authService.RefreshAsync(request.RefreshToken, cancellationToken);
+        if (result == null)
+            return Unauthorized();
+
+        return Ok(result);
+    }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout([FromBody] RefreshRequest request, CancellationToken cancellationToken)
+    {
+        var success = await _authService.LogoutAsync(request.RefreshToken, cancellationToken);
+        if (!success)
+            return Unauthorized();
+
+        return NoContent();
+    }
 }

@@ -1,7 +1,6 @@
 using DCData.Entities;
 using DCData.Repositories.Auth;
 using DCData.Security;
-using DCData.Session;
 using DCProtocol.Auth;
 
 namespace DCServerCore.Auth;
@@ -10,16 +9,16 @@ public sealed class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
-    private readonly ISessionStore _sessionStore;
+    private readonly ITokenService _tokenService;
 
     public AuthService(
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
-        ISessionStore sessionStore)
+        ITokenService tokenService)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
-        _sessionStore = sessionStore;
+        _tokenService = tokenService;
     }
 
     public async Task<LoginResponse?> LoginAsync(string email, string password, CancellationToken cancellationToken = default)
@@ -31,11 +30,14 @@ public sealed class AuthService : IAuthService
         if (!_passwordHasher.Verify(password, user.PasswordHash))
             return null;
 
-        var sessionId = await _sessionStore.CreateAsync(user.Id, cancellationToken: cancellationToken);
+        var accessToken = _tokenService.GenerateAccessToken(user.Id);
+        var refreshToken = await _tokenService.GenerateRefreshTokenAsync(user.Id, cancellationToken);
 
         return new LoginResponse
         {
-            SessionId = sessionId,
+            AccessToken = accessToken,
+            RefreshToken = refreshToken,
+            ExpiresAt = _tokenService.GetAccessTokenExpiry(),
             UserId = user.Id,
             Nickname = user.Nickname
         };
@@ -63,17 +65,55 @@ public sealed class AuthService : IAuthService
         };
 
         var userId = await _userRepository.CreateAsync(user, cancellationToken);
-        var sessionId = await _sessionStore.CreateAsync(userId, cancellationToken: cancellationToken);
+        var accessToken = _tokenService.GenerateAccessToken(userId);
+        var refreshToken = await _tokenService.GenerateRefreshTokenAsync(userId, cancellationToken);
 
         return new SignupResult
         {
             Success = true,
             Data = new LoginResponse
             {
-                SessionId = sessionId,
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                ExpiresAt = _tokenService.GetAccessTokenExpiry(),
                 UserId = userId,
                 Nickname = nickname
             }
         };
+    }
+
+    public async Task<LoginResponse?> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default)
+    {
+        var userId = await _tokenService.ValidateRefreshTokenAsync(refreshToken, cancellationToken);
+        if (userId == null)
+            return null;
+
+        var user = await _userRepository.FindByIdAsync(userId.Value, cancellationToken);
+        if (user == null)
+            return null;
+
+        await _tokenService.RevokeRefreshTokenAsync(refreshToken, cancellationToken);
+
+        var newAccessToken = _tokenService.GenerateAccessToken(user.Id);
+        var newRefreshToken = await _tokenService.GenerateRefreshTokenAsync(user.Id, cancellationToken);
+
+        return new LoginResponse
+        {
+            AccessToken = newAccessToken,
+            RefreshToken = newRefreshToken,
+            ExpiresAt = _tokenService.GetAccessTokenExpiry(),
+            UserId = user.Id,
+            Nickname = user.Nickname
+        };
+    }
+
+    public async Task<bool> LogoutAsync(string refreshToken, CancellationToken cancellationToken = default)
+    {
+        var userId = await _tokenService.ValidateRefreshTokenAsync(refreshToken, cancellationToken);
+        if (userId == null)
+            return false;
+
+        await _tokenService.RevokeRefreshTokenAsync(refreshToken, cancellationToken);
+        return true;
     }
 }

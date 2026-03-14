@@ -13,6 +13,17 @@ public sealed class UserRepository : IUserRepository
         _queryFactoryProvider = queryFactoryProvider;
     }
 
+    public async Task<User?> FindByIdAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var factory = await _queryFactoryProvider.CreateAsync();
+        using (factory)
+        {
+            return await factory.Query("users")
+                .Where("Id", id)
+                .FirstOrDefaultAsync<User>();
+        }
+    }
+
     public async Task<User?> FindByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         var factory = await _queryFactoryProvider.CreateAsync();

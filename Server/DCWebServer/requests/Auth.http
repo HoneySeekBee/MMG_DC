@@ -20,3 +20,23 @@ Content-Type: application/json
   "password": "password123",
   "nickname": "TestUser"
 }
+
+###
+
+### Refresh (replace {{refreshToken}} with actual token from login/signup)
+POST {{base}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+###
+
+### Logout
+POST {{base}}/api/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
