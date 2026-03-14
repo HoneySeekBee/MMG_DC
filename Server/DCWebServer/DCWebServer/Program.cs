@@ -1,6 +1,10 @@
 using DCData;
 using DCData.Connections;
 using DCData.Querying;
+using DCData.Repositories.Auth;
+using DCData.Security;
+using DCData.Session;
+using DCServerCore.Auth;
 using Microsoft.EntityFrameworkCore;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using StackExchange.Redis;
@@ -27,6 +31,13 @@ namespace DCWebServer
                     builder.Configuration.GetConnectionString("MainDatabase"),
                     ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("MainDatabase"))
                 ));
+
+            // ── Repositories & Services ──────────────────────────────────────
+            builder.Services.AddScoped<IUserRepository, UserRepository>();
+            builder.Services.AddSingleton<ISessionStore, SessionStore>();
+            builder.Services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
+            builder.Services.AddScoped<IAuthService, AuthService>();
+
             // ── API ──────────────────────────────────────────────────────────
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
