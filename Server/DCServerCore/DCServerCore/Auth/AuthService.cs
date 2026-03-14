@@ -52,7 +52,7 @@ public sealed class AuthService : IAuthService
         var passwordHash = _passwordHasher.Hash(password);
         var now = DateTime.UtcNow;
 
-        var user = new User
+        var user = new DCData.Entities.User
         {
             Email = email,
             PasswordHash = passwordHash,

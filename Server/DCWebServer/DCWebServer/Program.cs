@@ -6,10 +6,12 @@ using DCData.Querying;
 using DCData.Repositories.Auth;
 using DCData.Security;
 using DCServerCore.Auth;
+using DCServerCore.User;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
+using DCWebServer.Swagger;
 using StackExchange.Redis;
 
 namespace DCWebServer
@@ -41,6 +43,7 @@ namespace DCWebServer
             builder.Services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<IUserService, UserService>();
 
             // ── JWT Authentication ───────────────────────────────────────────
             var jwtSecret = builder.Configuration["Jwt:Secret"] ?? throw new InvalidOperationException("Jwt:Secret is required");
@@ -67,7 +70,10 @@ namespace DCWebServer
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(c =>
+            {
+                c.OperationFilter<RefreshRequestExample>();
+            });
 
             var app = builder.Build();
 
