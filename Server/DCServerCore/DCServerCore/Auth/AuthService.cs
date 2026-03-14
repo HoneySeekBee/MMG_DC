@@ -1,3 +1,4 @@
+using DCData.Entities;
 using DCData.Repositories.Auth;
 using DCData.Security;
 using DCData.Session;
@@ -37,6 +38,42 @@ public sealed class AuthService : IAuthService
             SessionId = sessionId,
             UserId = user.Id,
             Nickname = user.Nickname
+        };
+    }
+
+    public async Task<SignupResult> SignupAsync(string email, string password, string nickname, CancellationToken cancellationToken = default)
+    {
+        var existing = await _userRepository.FindByEmailAsync(email, cancellationToken);
+        if (existing != null)
+            return new SignupResult { Success = false, DuplicateEmail = true };
+
+        var passwordHash = _passwordHasher.Hash(password);
+        var now = DateTime.UtcNow;
+
+        var user = new User
+        {
+            Email = email,
+            PasswordHash = passwordHash,
+            Nickname = nickname,
+            Level = 1,
+            Gold = 0,
+            Stamina = 100,
+            LastLoginAt = now,
+            CreatedAt = now
+        };
+
+        var userId = await _userRepository.CreateAsync(user, cancellationToken);
+        var sessionId = await _sessionStore.CreateAsync(userId, cancellationToken: cancellationToken);
+
+        return new SignupResult
+        {
+            Success = true,
+            Data = new LoginResponse
+            {
+                SessionId = sessionId,
+                UserId = userId,
+                Nickname = nickname
+            }
         };
     }
 }

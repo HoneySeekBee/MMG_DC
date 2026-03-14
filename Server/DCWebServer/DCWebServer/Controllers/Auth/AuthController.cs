@@ -24,4 +24,16 @@ public class AuthController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpPost("signup")]
+    public async Task<IActionResult> Signup([FromBody] SignupRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _authService.SignupAsync(request.Email, request.Password, request.Nickname, cancellationToken);
+        if (result.DuplicateEmail)
+            return Conflict("Email already exists");
+        if (!result.Success || result.Data == null)
+            return BadRequest();
+
+        return Ok(result.Data);
+    }
 }

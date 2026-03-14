@@ -23,4 +23,27 @@ public sealed class UserRepository : IUserRepository
                 .FirstOrDefaultAsync<User>();
         }
     }
+
+    public async Task<int> CreateAsync(User user, CancellationToken cancellationToken = default)
+    {
+        var factory = await _queryFactoryProvider.CreateAsync();
+        using (factory)
+        {
+            var id = await factory.Query("users").InsertGetIdAsync<int>(new
+            {
+                user.Email,
+                user.PasswordHash,
+                user.Nickname,
+                user.Level,
+                user.Gold,
+                user.Stamina,
+                user.CurrentDungeonId,
+                user.CurrentFloor,
+                user.LastLoginAt,
+                user.CreatedAt,
+                user.UpdatedAt
+            });
+            return id;
+        }
+    }
 }
